@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { 
+            margin: 0; 
+            padding: 0;
+            font-family: Arial, sans-serif; 
+            background: transparent;
+        }
+        .banner-container {
+            position: relative;
+            width: 512px;
+            height: 512px;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+        }
+        .banner-container:hover {
+            transform: scale(1.02);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        .banner-container:hover .nav-arrow {
+            opacity: 1;
+        }
+        .banner-slider {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            transition: transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        .banner-ad {
+            flex: 0 0 100%;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        /* Navigation arrows */
+        .nav-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 50px;
+            height: 50px;
+            background: rgba(0, 0, 0, 0.5);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 20;
+            opacity: 0;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .nav-arrow:hover {
+            background: rgba(0, 0, 0, 0.8);
+            transform: translateY(-50%) scale(1.1);
+        }
+        .nav-arrow.prev {
+            left: 15px;
+        }
+        .nav-arrow.next {
+            right: 15px;
+        }
+        
+        /* Slide direction indicators */
+        .slide-indicator {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 30px;
+            height: 30px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 16px;
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        .slide-indicator.left {
+            left: 20px;
+        }
+        .slide-indicator.right {
+            right: 20px;
+        }
+        .banner-container.sliding-left .slide-indicator.left,
+        .banner-container.sliding-right .slide-indicator.right {
+            opacity: 1;
+        }
+        
+        /* Progress bar */
+        .progress-bar {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            height: 3px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: rgba(255,255,255,0.8);
+            width: 0%;
+            transition: width 0.1s linear;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="banner-container" onclick="openCurrentLink()">
+        <div class="banner-slider" id="bannerSlider">
+            <!-- Images will be dynamically added here -->
+        </div>
+        
+        <!-- Navigation arrows -->
+        <button class="nav-arrow prev" onclick="event.stopPropagation(); prevSlide()">‹</button>
+        <button class="nav-arrow next" onclick="event.stopPropagation(); nextSlide()">›</button>
+        
+        <!-- Slide indicators -->
+        <div class="slide-indicator left">‹</div>
+        <div class="slide-indicator right">›</div>
+        
+        <!-- Progress bar -->
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+    </div>
+
+    <script>
+        // Array of banner images
+        const banners = [
+            'https://raw.githubusercontent.com/Shattered9/BookCollection/refs/heads/main/WidgetImages/AdPlaceholder1.png?token=GHSAT0AAAAAADFCMHA6RFZ6XCQFAGH4XXHU2CAEBOA',
+            'https://raw.githubusercontent.com/Shattered9/BookCollection/refs/heads/main/WidgetImages/AdPlaceholder2.png?token=GHSAT0AAAAAADFCMHA7VQXKHFNGAITDVYV42CAEBWA',
+            'PUT_YOUR_THIRD_IMAGE_LINK_HERE'
+            // Add more images as needed
+        ];
+        
+        // Array of corresponding links
+        const links = [
+            'PUT_YOUR_FIRST_LINK_HERE',
+            'PUT_YOUR_SECOND_LINK_HERE', 
+            'PUT_YOUR_THIRD_LINK_HERE'
+            // Add more links as needed
+        ];
+        
+        let currentIndex = 0;
+        let slideInterval;
+        let progressInterval;
+        const slideContainer = document.getElementById('bannerSlider');
+        const progressFill = document.getElementById('progressFill');
+        const bannerContainer = document.querySelector('.banner-container');
+        
+        // Initialize banner images
+        function initializeBanners() {
+            banners.forEach((banner, index) => {
+                const img = document.createElement('img');
+                img.src = banner;
+                img.className = 'banner-ad';
+                img.alt = `Game Banner ${index + 1}`;
+                slideContainer.appendChild(img);
+            });
+        }
+        
+        // Slide to specific index
+        function slideTo(index, direction = 'right') {
+            // Add slide direction class for animation indicator
+            bannerContainer.classList.remove('sliding-left', 'sliding-right');
+            bannerContainer.classList.add(`sliding-${direction}`);
+            
+            // Remove direction class after animation
+            setTimeout(() => {
+                bannerContainer.classList.remove('sliding-left', 'sliding-right');
+            }, 800);
+            
+            // Calculate transform
+            const translateX = -index * 100;
+            slideContainer.style.transform = `translateX(${translateX}%)`;
+            currentIndex = index;
+            
+            // Reset progress bar
+            resetProgress();
+        }
+        
+        // Next slide
+        function nextSlide() {
+            const nextIndex = (currentIndex + 1) % banners.length;
+            slideTo(nextIndex, 'right');
+        }
+        
+        // Previous slide
+        function prevSlide() {
+            const prevIndex = currentIndex === 0 ? banners.length - 1 : currentIndex - 1;
+            slideTo(prevIndex, 'left');
+        }
+        
+        // Progress bar animation
+        function animateProgress() {
+            let progress = 0;
+            progressInterval = setInterval(() => {
+                progress += (100 / 60); // 60 steps for 6 seconds (100ms intervals)
+                progressFill.style.width = progress + '%';
+                
+                if (progress >= 100) {
+                    clearInterval(progressInterval);
+                    nextSlide();
+                }
+            }, 100);
+        }
+        
+        // Reset progress bar
+        function resetProgress() {
+            clearInterval(progressInterval);
+            progressFill.style.width = '0%';
+            setTimeout(() => {
+                animateProgress();
+            }, 100);
+        }
+        
+        // Open current link
+        function openCurrentLink() {
+            window.open(links[currentIndex], '_blank');
+        }
+        
+        // Initialize everything
+        initializeBanners();
+        
+        // Start auto-sliding after page load
+        setTimeout(() => {
+            animateProgress();
+        }, 500);
+    </script>
+</body>
+</html>
